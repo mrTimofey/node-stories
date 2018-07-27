@@ -1,0 +1,30 @@
+{
+  "name": "stories",
+  "version": "0.0.1",
+  "description": "Stories PAAS",
+  "main": "index.js",
+  "private": true,
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mrTimofey/node-stories.git"
+  },
+  "author": "Timofey <timoxa17@gmail.com>",
+  "bugs": {
+    "url": "https://github.com/mrTimofey/node-stories/issues"
+  },
+  "homepage": "https://github.com/mrTimofey/node-stories#readme",
+  "engines": {
+    "node": ">=9.11.2",
+    "npm": ">=6.2.0"
+  },
+  "devDependencies": {
+    "eslint": "^5.2.0"
+  },
+  "dependencies": {
+    "nedb": "^1.8.0",
+    "polka": "^0.4.0"
+  }
+}

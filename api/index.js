@@ -29,7 +29,9 @@ module.exports = ({ models, port = 3000, prefix = '/api/' }) => {
 
 	// current user data
 	app.get(prefix + 'me', async (req, res) => {
-		sendJson({ res, data: (await req.loadUser()).toProfileJSON() });
+		const user = await req.loadUser();
+		if (user) sendJson({ res, data: user.toProfileJSON() });
+		else sendError({ statusCode: 401, message: 'Authorization required' }, res);
 	});
 
 	// auto create CRUD model routes
@@ -58,7 +60,7 @@ module.exports = ({ models, port = 3000, prefix = '/api/' }) => {
 				const body = await jsonBody(req),
 					item = Model.create();
 				item.fill(body);
-				await item.fillFromRequest(req);
+				await item.fillFromRequest(req, body);
 				await item.validateFields();
 				await item.save();
 				sendJson({ res, data: item.toSafeJSON() });
@@ -76,7 +78,7 @@ module.exports = ({ models, port = 3000, prefix = '/api/' }) => {
 			try {
 				const body = await jsonBody(req);
 				item.fill(body);
-				await item.fillFromRequest(req);
+				await item.fillFromRequest(req, body);
 				await item.validateFields();
 				await item.save();
 				sendJson({ res, data: item.toSafeJSON() });

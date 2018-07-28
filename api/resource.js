@@ -61,8 +61,10 @@ module.exports = class Resource extends Document {
 		for (const name of fillableFields) this[name] = data[name];
 	}
 
-	// eslint-disable-next-line
-	fillFromRequest(req) {}
+
+	fillFromRequest(req, body) {
+		//
+	}
 
 	toSafeJSON() {
 		const safeObj = {},

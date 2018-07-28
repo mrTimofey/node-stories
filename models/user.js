@@ -90,6 +90,12 @@ module.exports = class User extends Resource {
 		return await this.allowUpdate(req);
 	}
 
+	async fillFromRequest(req, body) {
+		const user = await req.loadUser();
+		// let admin modify other users' quota
+		if (user && user.admin && body.hasOwnProperty('body')) this.quota = body.quota;
+	}
+
 	preSave() {
 		this.email = this.email.toString().toLowerCase();
 		if (isNaN(this.quota)) this.quota = null;
@@ -101,8 +107,8 @@ module.exports = class User extends Resource {
 		if (this.password && !hash.isHashed(this.password)) this.password = hash.generate(this.password);
 	}
 
-	async preDelete() {
-		return await Promise.all(this.stories.map(story => story.delete()));
+	preDelete() {
+		return require('./story').deleteMany({ user: this._id });
 	}
 
 	toProfileJSON() {

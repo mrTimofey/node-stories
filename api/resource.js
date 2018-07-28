@@ -14,6 +14,10 @@ module.exports = class Resource extends Document {
 		return {};
 	}
 
+	get fillable() {
+		return true;
+	}
+
 	static indexQuery(req) {
 		return this.find({}, { populate: false });
 	}
@@ -44,5 +48,12 @@ module.exports = class Resource extends Document {
 
 	allowDelete(req) {
 		return true;
+	}
+
+	fill(data) {
+		const fillableFields = this.fillable === true ?
+			Object.keys(data) :
+			Object.keys(data).filter(name => this.fillable.includes(name));
+		for (const name of fillableFields) this[name] = data[name];
 	}
 };

@@ -28,7 +28,7 @@ module.exports = ({ models, port = 3000, prefix = '/api/' }) => {
 			if (!Model.allowCreate(req)) return sendPermissionDenied(res);
 			try {
 				const body = await jsonBody(req),
-					item = Model.create(body);
+					item = Model.create().fill(body);
 				await item.validateFields();
 				await item.save();
 				sendJson({ res, data: item });
@@ -45,6 +45,7 @@ module.exports = ({ models, port = 3000, prefix = '/api/' }) => {
 			if (!item.allowUpdate(req)) return sendPermissionDenied(res);
 			try {
 				const body = await jsonBody(req);
+				item.fill(body);
 				await item.validateFields();
 				await item.save();
 				sendJson({ res, data: item });

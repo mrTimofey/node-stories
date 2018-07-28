@@ -5,7 +5,8 @@
   "main": "index.js",
   "private": true,
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "NODE_ENV=production node index",
+    "wipe": "rm data/*.db"
   },
   "repository": {
     "type": "git",
@@ -24,7 +25,10 @@
     "eslint": "^5.2.0"
   },
   "dependencies": {
+    "camo": "^0.12.3",
+    "indicative": "^5.0.6",
     "nedb": "^1.8.0",
+    "password-hash": "^1.2.2",
     "polka": "^0.4.0"
   }
 }

@@ -8,10 +8,11 @@ module.exports = {
 	},
 	root: true,
 	env: {
-		node: true
+		node: true,
+		es6: true
 	},
 	rules: {
-		'no-console': 1,
+		'no-console': 0,
 		'no-constant-condition': 2,
 		'no-dupe-args': 2,
 		'no-dupe-keys': 2,

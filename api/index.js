@@ -28,7 +28,8 @@ module.exports = ({ models, port = 3000, prefix = '/api/' }) => {
 			if (!Model.allowCreate(req)) return sendPermissionDenied(res);
 			try {
 				const body = await jsonBody(req),
-					item = Model.create().fill(body);
+					item = Model.create();
+				item.fill(body);
 				await item.validateFields();
 				await item.save();
 				sendJson({ res, data: item });

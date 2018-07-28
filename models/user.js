@@ -5,7 +5,7 @@ const hash = require('password-hash'),
 module.exports = class User extends Resource {
 	get validationRules() {
 		return {
-			email: 'required|email',
+			email: 'required|email|unique:users,email' + (this._id ? (',' + this._id) : ''),
 			password: 'required|min:5'
 		};
 	}

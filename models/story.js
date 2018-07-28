@@ -18,6 +18,8 @@ module.exports = class Story extends Resource {
 	}
 
 	static indexQuery(req) {
-		return this.find({}, { populate: ['user'] });
+		const conditions = {};
+		if (req.query.user) conditions.user = req.query.user;
+		return this.find(conditions, { populate: ['user']});
 	}
 };

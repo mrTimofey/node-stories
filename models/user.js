@@ -1,6 +1,5 @@
 const hash = require('password-hash'),
-	Resource = require('../api/resource'),
-	Story = require('./story');
+	Resource = require('../api/resource');
 
 const TOKENS_LIMIT = 10;
 
@@ -27,6 +26,10 @@ module.exports = class User extends Resource {
 			},
 			tokens: [String]
 		});
+	}
+
+	get visible() {
+		return ['_id', 'email', 'admin'];
 	}
 
 	get fillable() {
@@ -73,6 +76,20 @@ module.exports = class User extends Resource {
 		return token;
 	}
 
+	static async allowCreate(req) {
+		const user = await req.loadUser();
+		return user && user.admin;
+	}
+
+	async allowUpdate(req) {
+		const user = await req.loadUser();
+		return user && (user.admin || user._id === this._id);
+	}
+
+	async allowDelete(req) {
+		return await this.allowUpdate(req);
+	}
+
 	preSave() {
 		this.email = this.email.toString().toLowerCase();
 		if (isNaN(this.quota)) this.quota = null;
@@ -86,5 +103,9 @@ module.exports = class User extends Resource {
 
 	async preDelete() {
 		return await Promise.all(this.stories.map(story => story.delete()));
+	}
+
+	toProfileJSON() {
+		return this.toJSON();
 	}
 };

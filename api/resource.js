@@ -14,6 +14,10 @@ module.exports = class Resource extends Document {
 		return {};
 	}
 
+	get visible() {
+		return true;
+	}
+
 	get fillable() {
 		return true;
 	}
@@ -34,10 +38,6 @@ module.exports = class Resource extends Document {
 		return true;
 	}
 
-	async validateFields() {
-		return await validateAll(this.toJSON(), this.validationRules, this.validationMessages);
-	}
-
 	allowShow(req) {
 		return true;
 	}
@@ -50,10 +50,27 @@ module.exports = class Resource extends Document {
 		return true;
 	}
 
+	async validateFields() {
+		return await validateAll(this.toJSON(), this.validationRules, this.validationMessages);
+	}
+
 	fill(data) {
 		const fillableFields = this.fillable === true ?
 			Object.keys(data) :
 			Object.keys(data).filter(name => this.fillable.includes(name));
 		for (const name of fillableFields) this[name] = data[name];
+	}
+
+	// eslint-disable-next-line
+	fillFromRequest(req) {}
+
+	toSafeJSON() {
+		const safeObj = {},
+			visibleFields = this.visible === true ?
+				Object.keys(this).filter(name => name === '_id' || !name.startsWith('_')) :
+				this.visible;
+		for (const name of visibleFields) if (this.hasOwnProperty(name))
+			safeObj[name] = this[name] instanceof Resource ? this[name].toSafeJSON() : this[name];
+		return safeObj;
 	}
 };

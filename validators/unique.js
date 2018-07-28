@@ -13,6 +13,7 @@ module.exports = (data, field, message, args, get) => {
 		conditions = { [checkField]: value };
 	if (exclude) conditions[excludeField] = { $ne: exclude };
 	return new Promise((resolve, reject) => {
+		if (!value) return resolve();
 		db.getClient().driver()[checkCollection]
 			.findOne(conditions, { populate: false }, (err, item) => {
 				if (err) throw err;

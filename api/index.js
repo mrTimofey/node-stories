@@ -29,7 +29,7 @@ module.exports = ({ models, port = 3000, prefix = '/api/' }) => {
 
 	// current user data
 	app.get(prefix + 'me', async (req, res) => {
-		sendJson({ res, data: await req.loadUser() });
+		sendJson({ res, data: (await req.loadUser()).toProfileJSON() });
 	});
 
 	// auto create CRUD model routes
@@ -39,28 +39,29 @@ module.exports = ({ models, port = 3000, prefix = '/api/' }) => {
 
 		// index
 		if (Model.methods.includes('index')) app.get(basePath, async (req, res) => {
-			if (!Model.allowIndex(req)) return sendPermissionDenied(res);
-			sendJson({ res, data: await Model.indexQuery(req) });
+			if (!(await Model.allowIndex(req))) return sendPermissionDenied(res);
+			sendJson({ res, data: (await Model.indexQuery(req)).map(item => item.toSafeJSON()) });
 		});
 
 		// single item
 		if (Model.methods.includes('item')) app.get(basePath + '/:id', async (req, res) => {
 			const item = await Model.itemQuery(req);
-			if (!item.allowShow(req)) return sendPermissionDenied(res);
 			if (!item) return sendNotFound(res);
-			sendJson({ res, data: item });
+			if (!(await item.allowShow(req))) return sendPermissionDenied(res);
+			sendJson({ res, data: item.toSafeJSON() });
 		});
 
 		// create
 		if (Model.methods.includes('create')) app.post(basePath, async (req, res) => {
-			if (!Model.allowCreate(req)) return sendPermissionDenied(res);
+			if (!(await Model.allowCreate(req))) return sendPermissionDenied(res);
 			try {
 				const body = await jsonBody(req),
 					item = Model.create();
 				item.fill(body);
+				await item.fillFromRequest(req);
 				await item.validateFields();
 				await item.save();
-				sendJson({ res, data: item });
+				sendJson({ res, data: item.toSafeJSON() });
 			}
 			catch(err) {
 				sendError(err, res);
@@ -71,13 +72,14 @@ module.exports = ({ models, port = 3000, prefix = '/api/' }) => {
 		if (Model.methods.includes('update')) app.put(basePath + '/:id', async (req, res) => {
 			const item = await Model.findOne({ _id: req.params.id });
 			if (!item) return sendNotFound(res);
-			if (!item.allowUpdate(req)) return sendPermissionDenied(res);
+			if (!(await item.allowUpdate(req))) return sendPermissionDenied(res);
 			try {
 				const body = await jsonBody(req);
 				item.fill(body);
+				await item.fillFromRequest(req);
 				await item.validateFields();
 				await item.save();
-				sendJson({ res, data: item });
+				sendJson({ res, data: item.toSafeJSON() });
 			}
 			catch(err) {
 				sendError(err, res);
@@ -88,7 +90,7 @@ module.exports = ({ models, port = 3000, prefix = '/api/' }) => {
 		if (Model.methods.includes('delete')) app.delete(basePath + '/:id', async (req, res) => {
 			const item = await Model.findOne({ _id: req.params.id });
 			if (!item) return sendNotFound(res);
-			if (!item.allowDelete(req)) return sendPermissionDenied(res);
+			if (!(await item.allowDelete(req))) return sendPermissionDenied(res);
 			await item.delete();
 			res.end();
 		});

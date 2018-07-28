@@ -1,8 +1,36 @@
 const polka = require('polka'),
+	User = require('../models/user'),
 	{ jsonBody, sendNotFound, sendError, sendJson, sendPermissionDenied } = require('./utils');
 
 module.exports = ({ models, port = 3000, prefix = '/api/' }) => {
 	const app = polka();
+
+	// extend request with current user data fetcher function
+	app.use((req, res, next) => {
+		req.loadUser = async () => {
+			if (!req.hasOwnProperty('user'))
+				req.user = await User.fromRequest(req);
+			return req.user;
+		};
+		next();
+	});
+
+	// authentication route
+	app.post(prefix + 'auth', async (req, res) => {
+		try {
+			const data = await User.authenticate(await jsonBody(req));
+			sendJson({ res, data });
+		}
+		catch(err) {
+			if (!err.statusCode) err.statusCode = 400;
+			sendError(err, res);
+		}
+	});
+
+	// current user data
+	app.get(prefix + 'me', async (req, res) => {
+		sendJson({ res, data: await req.loadUser() });
+	});
 
 	// auto create CRUD model routes
 	models.forEach(Model => {

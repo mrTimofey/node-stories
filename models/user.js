@@ -1,4 +1,5 @@
-const Resource = require('../api/resource'),
+const hash = require('password-hash'),
+	Resource = require('../api/resource'),
 	Story = require('./story');
 
 module.exports = class User extends Resource {
@@ -20,8 +21,15 @@ module.exports = class User extends Resource {
 		this.schema({
 			email: String,
 			password: String,
-			quota: Number,
-			stories: [Story]
+			quota: Number
 		});
+	}
+
+	preSave() {
+		if (this.password && !hash.isHashed(this.password)) this.password = hash.generate(this.password);
+	}
+
+	async preDelete() {
+		return await Promise.all(this.stories.map(story => story.delete()));
 	}
 };

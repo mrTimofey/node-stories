@@ -3,7 +3,7 @@ const fs = require('fs'),
 	{ validations } = require('indicative'),
 	createApiServer = require('./api');
 
-module.exports = async ({ port = 3000, dataFolder = 'data' }) => {
+module.exports = async ({ dataFolder = 'data' }) => {
 	fs.readdirSync(process.cwd() + '/validators')
 		.forEach(fileName => {
 			validations[fileName.replace(/\.js$/, '').split('-').join('_')] = require('./validators/' + fileName);
@@ -13,5 +13,5 @@ module.exports = async ({ port = 3000, dataFolder = 'data' }) => {
 	const models = fs.readdirSync(process.cwd() + '/models').map(fileName => require('./models/' + fileName));
 	// workaround to force database file creating
 	await Promise.all(models.map(Model => Model.findOne()));
-	return createApiServer({ models, port });
+	return createApiServer({ models });
 };

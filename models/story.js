@@ -42,7 +42,6 @@ module.exports = class Story extends Resource {
 	static async allowCreate(req) {
 		// check user quota
 		const user = await req.loadUser();
-		console.log(user);
 		if (!user) return false;
 		if (user.quota === 0)
 			// eslint-disable-next-line
@@ -70,5 +69,9 @@ module.exports = class Story extends Resource {
 			const user = await req.loadUser();
 			this.user = user._id;
 		}
+	}
+
+	async postSave() {
+		await this.populate('user');
 	}
 };

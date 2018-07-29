@@ -15,7 +15,7 @@ function wrapAsyncHandler(fn) {
 	);
 }
 
-module.exports = ({ port, models, prefix = '/api/' }) => {
+module.exports = ({ models, prefix = '/api/' }) => {
 	const app = polka({ onError, onNoMatch: (req, res) => sendNotFound(res) }),
 		authRoute = prefix + 'auth';
 
@@ -113,6 +113,5 @@ module.exports = ({ port, models, prefix = '/api/' }) => {
 		if (fn.constructor.name === 'AsyncFunction') app.handlers[method][path] = wrapAsyncHandler(fn);
 	}
 
-	app.listen(port);
 	return app;
 };

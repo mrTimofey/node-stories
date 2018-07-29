@@ -4,12 +4,15 @@ module.exports = {
 		sourceType: 'module',
 		ecmaFeatures: {
 			impliedStrict: true,
+			experimentalObjectRestSpread: true
 		}
 	},
+	plugins: ['jest'],
 	root: true,
 	env: {
 		node: true,
-		es6: true
+		es6: true,
+		'jest/globals': true
 	},
 	rules: {
 		'no-console': 0,

@@ -7,7 +7,7 @@
   "scripts": {
     "start": "NODE_ENV=production node index",
     "wipe": "rm data/*.db",
-    "test": "node test"
+    "test": "jest"
   },
   "repository": {
     "type": "git",
@@ -23,7 +23,10 @@
     "npm": ">=6.2.0"
   },
   "devDependencies": {
-    "eslint": "^5.2.0"
+    "axios": "^0.18.0",
+    "eslint": "^5.2.0",
+    "eslint-plugin-jest": "^21.18.0",
+    "jest": "^23.4.2"
   },
   "dependencies": {
     "camo": "^0.12.3",
@@ -31,5 +34,9 @@
     "nedb": "^1.8.0",
     "password-hash": "^1.2.2",
     "polka": "^0.4.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "verbose": true
   }
 }

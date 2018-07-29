@@ -2,10 +2,11 @@ const polka = require('polka'),
 	User = require('../models/user'),
 	{ jsonBody, sendNotFound, sendError, sendJson, sendPermissionDenied } = require('./utils');
 
-module.exports = ({ port, models, prefix }) => {
-	const app = polka();
+module.exports = ({ port, models, prefix = '/api/' }) => {
+	const app = polka(),
+		authRoute = prefix + 'auth';
 
-	// extend request with current user data fetcher function
+	// middleware, extend request with current user data fetcher function
 	app.use((req, res, next) => {
 		req.loadUser = async () => {
 			if (!req.hasOwnProperty('user'))
@@ -15,13 +16,19 @@ module.exports = ({ port, models, prefix }) => {
 		next();
 	});
 
+	// middleware, return 401 if user is not authorized
+	app.use(async (req, res, next) => {
+		if (req.path === authRoute || (await req.loadUser())) next();
+		else sendError({ statusCode: 401, message: 'Authorization required' }, res);
+	});
+
 	// authentication route
-	app.post(prefix + 'auth', async (req, res) => {
+	app.post(authRoute, async (req, res) => {
 		try {
 			const data = await User.authenticate(await jsonBody(req));
 			sendJson({ res, data });
 		}
-		catch(err) {
+		catch (err) {
 			if (!err.statusCode) err.statusCode = 400;
 			sendError(err, res);
 		}
@@ -30,8 +37,7 @@ module.exports = ({ port, models, prefix }) => {
 	// current user data
 	app.get(prefix + 'me', async (req, res) => {
 		const user = await req.loadUser();
-		if (user) sendJson({ res, data: user.toProfileJSON() });
-		else sendError({ statusCode: 401, message: 'Authorization required' }, res);
+		sendJson({ res, data: user ? user.toProfileJSON() : null });
 	});
 
 	// auto create CRUD model routes
@@ -65,7 +71,7 @@ module.exports = ({ port, models, prefix }) => {
 				await item.save();
 				sendJson({ res, data: item.toSafeJSON() });
 			}
-			catch(err) {
+			catch (err) {
 				sendError(err, res);
 			}
 		});
@@ -83,7 +89,7 @@ module.exports = ({ port, models, prefix }) => {
 				await item.save();
 				sendJson({ res, data: item.toSafeJSON() });
 			}
-			catch(err) {
+			catch (err) {
 				sendError(err, res);
 			}
 		});

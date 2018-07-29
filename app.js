@@ -9,7 +9,7 @@ module.exports = async ({ port = 3000, dataFolder = 'data' }) => {
 			validations[fileName.replace(/\.js$/, '').split('-').join('_')] = require('./validators/' + fileName);
 		});
 
-	await connect(`nedb://${process.cwd()}/${dataFolder}`)
+	await connect(`nedb://${process.cwd()}/${dataFolder}`);
 	const models = fs.readdirSync(process.cwd() + '/models').map(fileName => require('./models/' + fileName));
 	// workaround to force database file creating
 	for (const Model of models) Model.findOne();

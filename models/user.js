@@ -116,8 +116,12 @@ module.exports = class User extends Resource {
 
 	async fillFromRequest(req, body) {
 		const user = await req.loadUser();
-		// let admin modify other users' quota
-		if (user && user.admin && body.hasOwnProperty('quota')) this.quota = body.quota;
+		// let admin modify some restricted data
+		if (user && user.admin) {
+			if (body.hasOwnProperty('quota')) this.quota = body.quota;
+			// set admin role but don't let user himself to mess things up
+			if (body.hasOwnProperty('admin') && user._id !== this._id) this.admin = body.admin;
+		}
 	}
 
 	preSave() {

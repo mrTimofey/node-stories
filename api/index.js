@@ -16,7 +16,7 @@ function wrapAsyncHandler(fn) {
 }
 
 module.exports = ({ port, models, prefix = '/api/' }) => {
-	const app = polka({ onError }),
+	const app = polka({ onError, onNoMatch: (req, res) => sendNotFound(res) }),
 		authRoute = prefix + 'auth';
 
 	// middleware, extend request with current user data fetcher function

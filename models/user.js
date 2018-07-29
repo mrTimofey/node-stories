@@ -49,12 +49,24 @@ module.exports = class User extends Resource {
 		};
 	}
 
+	/**
+	 * Try to fetch authorized user.
+	 * @param {Object} req request object
+	 * @returns {Promise<User|null>} user data or null
+	 */
 	static async fromRequest(req) {
 		const token = req.headers.authorization && req.headers.authorization.substr(7);
 		if (!token) return null;
 		return await this.findOne({ tokens: { $elemMatch: token } });
 	}
 
+	/**
+	 * Authenticate user by email and password.
+	 * @param {string} email email
+	 * @param {string} password password
+	 * @returns {Promise<{user: User, token: string}>} user data and token
+	 * @throws {Error} wrong credentials
+	 */
 	static async authenticate({ email, password }) {
 		const user = await this.findOne({ email });
 		if (user && hash.verify(password, user.password))
@@ -65,6 +77,10 @@ module.exports = class User extends Resource {
 		throw new Error('Wrong credentials');
 	}
 
+	/**
+	 * Generate and store new authorization token for this user.
+	 * @returns {Promise<string>} generated token
+	 */
 	async issueToken() {
 		if (!this.tokens) this.tokens = [];
 		const token = randomString();
@@ -76,14 +92,22 @@ module.exports = class User extends Resource {
 		return token;
 	}
 
-	static async allowCreate(req) {
+	static async allowIndex(req) {
 		const user = await req.loadUser();
 		return user && user.admin;
 	}
 
-	async allowUpdate(req) {
+	static async allowCreate(req) {
+		return await this.allowIndex(req);
+	}
+
+	async allowShow(req) {
 		const user = await req.loadUser();
-		return user && (user.admin || user._id === this._id);
+		return user && user.admin || user._id === this._id;
+	}
+
+	async allowUpdate(req) {
+		return await this.allowShow(req);
 	}
 
 	async allowDelete(req) {
@@ -93,24 +117,33 @@ module.exports = class User extends Resource {
 	async fillFromRequest(req, body) {
 		const user = await req.loadUser();
 		// let admin modify other users' quota
-		if (user && user.admin && body.hasOwnProperty('body')) this.quota = body.quota;
+		if (user && user.admin && body.hasOwnProperty('quota')) this.quota = body.quota;
 	}
 
 	preSave() {
+		// normalize email
 		this.email = this.email.toString().toLowerCase();
+		// ensure quota to be null or number
 		if (isNaN(this.quota)) this.quota = null;
 		else {
 			this.quota = parseInt(this.quota);
-			if (this.quota <= 0) this.quota = null;
+			if (this.quota < 0) this.quota = null;
 		}
+		// ensure boolean value
 		this.admin = !!this.admin;
+		// hash new password
 		if (this.password && !hash.isHashed(this.password)) this.password = hash.generate(this.password);
 	}
 
 	preDelete() {
+		// delete all stories of this user
 		return require('./story').deleteMany({ user: this._id });
 	}
 
+	/**
+	 * Reveal user's own data.
+	 * @returns {Object} user data
+	 */
 	toProfileJSON() {
 		return this.toJSON();
 	}

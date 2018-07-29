@@ -13,26 +13,6 @@ exports.sendJson = ({ res, data, status = 200, headers = {} }) => {
 };
 
 /**
- * Send 404 response.
- * @param {Object} res response object
- * @returns {undefined}
- */
-exports.sendNotFound = res => {
-	res.writeHead(404);
-	res.end('Not Found');
-};
-
-/**
- * Send 403 response.
- * @param {Object} res response object
- * @returns {undefined}
- */
-exports.sendPermissionDenied = res => {
-	res.writeHead(403);
-	res.end('Permission denied');
-};
-
-/**
  * Send error response based on error object with optional `statusCode` field.
  * @param {Error|{statusCode:Number}|String|Array} err error object or message or validation errors array
  * @param {Object} res response object
@@ -43,15 +23,41 @@ exports.sendError = (err, res) => {
 	if (Array.isArray(err)) exports.sendJson({ res, status: 422, data: { errors: err } });
 	// any other error
 	else {
-		res.writeHead(err.statusCode || 500);
-		res.end(typeof error === 'string' ? err : (err.message || 'Error'));
+		const status = err.statusCode || 500,
+			data = err.jsonData,
+			message = typeof err === 'string' ? err : err.message;
+		// JSON body
+		if (data) exports.sendJson({ res, status, data });
+		// string message body
+		else if (message) {
+			res.writeHead(status, { 'Content-Type': 'text/plain' });
+			res.end(message || 'Error');
+		}
 	}
+};
+
+/**
+ * Send 404 response.
+ * @param {Object} res response object
+ * @returns {undefined}
+ */
+exports.sendNotFound = res => {
+	exports.sendError({ statusCode: 404, message: 'Not Found' }, res);
+};
+
+/**
+ * Send 403 response.
+ * @param {Object} res response object
+ * @returns {undefined}
+ */
+exports.sendPermissionDenied = res => {
+	exports.sendError({ statusCode: 403, message: 'Permission Denied' }, res);
 };
 
 /**
  * Parse request body as a JSON object.
  * @param {Object} req request object
- * @returns {Promise<any>} parsed JSON data
+ * @returns {Promise<any|Object>} parsed JSON data
  */
 exports.jsonBody = async req => {
 	return await new Promise((resolve, reject) => {

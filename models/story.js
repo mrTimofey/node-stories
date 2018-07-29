@@ -36,14 +36,21 @@ module.exports = class Story extends Resource {
 	static async allowCreate(req) {
 		// check user quota
 		const user = await req.loadUser();
-		if (!user || user.quota === 0) return false;
-		if (user.quota === null) return true;
+		if (user.quota === null || user.quota === undefined) return true;
+		if (!user) return false;
+		if (user.quota === 0)
+			// eslint-disable-next-line
+			throw { statusCode: 403, jsonData: { message: 'Permission denied', quota: 0 } };
 		const count = await this.count({ user: user._id });
-		return user.quota > count;
+		if (user.quota > count) return true;
+		// eslint-disable-next-line
+		throw { statusCode: 403, jsonData: { message: 'Quota exceeded', quota: user.quota, storiesCount: count } };
 	}
 
-	allowUpdate(req) {
-		return req.loadUser().then(user => user && (user.admin || user._id === (this.user._id || this.user)));
+	async allowUpdate(req) {
+		const user = await req.loadUser();
+		// only admin or story owner
+		return user && (user.admin || user._id === (this.user._id || this.user));
 	}
 
 	allowDelete(req) {

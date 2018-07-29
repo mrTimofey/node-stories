@@ -2,8 +2,21 @@ const polka = require('polka'),
 	User = require('../models/user'),
 	{ jsonBody, sendNotFound, sendError, sendJson, sendPermissionDenied } = require('./utils');
 
+function onError(err, req, res, next) {
+	sendError(err, res);
+	if (!Array.isArray(err) && (!err.statusCode || err.statusCode >= 500)) console.log(err.stack || err);
+	if (next) next();
+}
+
+function wrapAsyncHandler(fn) {
+	return (req, res) => new Promise(resolve => fn(req, res)
+		.then(resolve)
+		.catch(err => onError(err, req, res))
+	);
+}
+
 module.exports = ({ port, models, prefix = '/api/' }) => {
-	const app = polka(),
+	const app = polka({ onError }),
 		authRoute = prefix + 'auth';
 
 	// middleware, extend request with current user data fetcher function
@@ -19,7 +32,7 @@ module.exports = ({ port, models, prefix = '/api/' }) => {
 	// middleware, return 401 if user is not authorized
 	app.use(async (req, res, next) => {
 		if (req.path === authRoute || (await req.loadUser())) next();
-		else sendError({ statusCode: 401, message: 'Authorization required' }, res);
+		else sendError({ statusCode: 401, message: 'Authorization Required' }, res);
 	});
 
 	// authentication route
@@ -62,18 +75,13 @@ module.exports = ({ port, models, prefix = '/api/' }) => {
 		// create
 		if (Model.methods.includes('create')) app.post(basePath, async (req, res) => {
 			if (!(await Model.allowCreate(req))) return sendPermissionDenied(res);
-			try {
-				const body = await jsonBody(req),
-					item = Model.create();
-				item.fill(body);
-				await item.fillFromRequest(req, body);
-				await item.validateFields();
-				await item.save();
-				sendJson({ res, data: item.toSafeJSON() });
-			}
-			catch (err) {
-				sendError(err, res);
-			}
+			const body = await jsonBody(req),
+				item = Model.create();
+			item.fill(body);
+			await item.fillFromRequest(req, body);
+			await item.validateFields();
+			await item.save();
+			sendJson({ res, data: item.toSafeJSON() });
 		});
 
 		// update
@@ -81,17 +89,12 @@ module.exports = ({ port, models, prefix = '/api/' }) => {
 			const item = await Model.findOne({ _id: req.params.id });
 			if (!item) return sendNotFound(res);
 			if (!(await item.allowUpdate(req))) return sendPermissionDenied(res);
-			try {
-				const body = await jsonBody(req);
-				item.fill(body);
-				await item.fillFromRequest(req, body);
-				await item.validateFields();
-				await item.save();
-				sendJson({ res, data: item.toSafeJSON() });
-			}
-			catch (err) {
-				sendError(err, res);
-			}
+			const body = await jsonBody(req);
+			item.fill(body);
+			await item.fillFromRequest(req, body);
+			await item.validateFields();
+			await item.save();
+			sendJson({ res, data: item.toSafeJSON() });
 		});
 
 		// delete
@@ -103,6 +106,12 @@ module.exports = ({ port, models, prefix = '/api/' }) => {
 			res.end();
 		});
 	});
+
+	// patch all handlers to properly catch async errors in async functions
+	for (const method of Object.keys(app.handlers)) for (const path of Object.keys(app.handlers[method])) {
+		const fn = app.handlers[method][path];
+		if (fn.constructor.name === 'AsyncFunction') app.handlers[method][path] = wrapAsyncHandler(fn);
+	}
 
 	app.listen(port);
 	return app;

@@ -2,7 +2,7 @@ const polka = require('polka'),
 	User = require('../models/user'),
 	{ jsonBody, sendNotFound, sendError, sendJson, sendPermissionDenied } = require('./utils');
 
-module.exports = ({ models, port = 3000, prefix = '/api/' }) => {
+module.exports = ({ port, models, prefix }) => {
 	const app = polka();
 
 	// extend request with current user data fetcher function

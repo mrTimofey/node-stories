@@ -13,7 +13,7 @@ Involved npm packages:
 
 ## Prerequisites
 
-You only need `node >= 9.11.2` and `npm >= 6.2.0`.
+You only need `node >= 9.11.2` and `npm >= 6.2.0` (may be less but not tested).
 
 ## Commands
 

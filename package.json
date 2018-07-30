@@ -18,10 +18,6 @@
     "url": "https://github.com/mrTimofey/node-stories/issues"
   },
   "homepage": "https://github.com/mrTimofey/node-stories#readme",
-  "engines": {
-    "node": ">=9.11.2",
-    "npm": ">=6.2.0"
-  },
   "devDependencies": {
     "axios": "^0.18.0",
     "eslint": "^5.2.0",

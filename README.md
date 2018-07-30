@@ -11,16 +11,6 @@ Involved npm packages:
 * `jest`, `axios` for API tests
 * `eslint` for code quality
 
-## Prerequisites
-
-You only need `node >= 9.11.2` and `npm >= 6.2.0` (may be less but not tested).
-
-## Commands
-
-* `npm test` - run tests
-* `npm start` - start API server on port 3000
-* `npm run wipe` - clean database
-
 ## Quick start
 
 ```
@@ -34,6 +24,16 @@ if you start the API server without any administrators created.
 Initial credentials: email `admin@admin.com`, password `secret`
 
 **It is strongly recommended to change these credentials ASAP.**
+
+## Prerequisites
+
+You only need `node >= 9.11.2` and `npm >= 6.2.0` (may be less but not tested).
+
+## Commands
+
+* `npm test` - run tests
+* `npm start` - start API server on port 3000
+* `npm run wipe` - clean database
 
 ## Configuration
 

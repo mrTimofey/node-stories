@@ -1,6 +1,9 @@
-const port = process.env.port || 3000;
+const config = {
+	port: process.env.PORT || 3000,
+	dataFolder: process.env.DATA_FOLDER || 'data'
+};
 
-require('./app')(process.env).then(async app => {
+require('./app')(config).then(async app => {
 	const User = require('./models/user'),
 		admin = await User.findOne({ admin: true });
 	if (!admin) {
@@ -13,6 +16,6 @@ require('./app')(process.env).then(async app => {
 		await User.create(data).save();
 		console.log(`New administrator created: email: ${data.email}, password: '${data.password}'`);
 	}
-	app.listen(port);
-	console.log('App is ready on port ' + port);
+	app.listen(config.port);
+	console.log('App is ready on port ' + config.port);
 });

@@ -33,7 +33,7 @@ module.exports = class User extends Resource {
 	}
 
 	get fillable() {
-		return ['email', 'password', 'password'];
+		return ['email', 'password'];
 	}
 
 	get validationRules() {
@@ -164,6 +164,8 @@ module.exports = class User extends Resource {
 	 * @returns {Object} user data
 	 */
 	toProfileJSON() {
-		return this.toJSON();
+		const data = this.toJSON();
+		delete data.password;
+		return data;
 	}
 };

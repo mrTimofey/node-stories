@@ -1,0 +1,406 @@
+openapi: 3.0.1
+info:
+  title: Stories PAAS API
+  description: REST API with users, their stories and quota management
+  version: 0.0.1
+servers:
+  - url: /api
+components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+  responses:
+    malformed400:
+      description: Malformed JSON request body
+    401:
+      description: Authorization required
+    403:
+      description: Authorized user is not allowed to perform this action
+    adminOnly403:
+      description: Authorized user is not administrator
+    404:
+      description: Requested resource not found
+    422:
+      description: Input data validation error
+      content:
+        application/json:
+          schema:
+            type: object
+            description: validation errors
+            properties:
+              errors:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    field:
+                      type: string
+                      description: field name
+                    validation:
+                      type: string
+                      description: validation rule code
+                    message:
+                      type: string
+                      description: human readable validation error message
+                  required: [field, validation]
+            example:
+              errors:
+                - field: name
+                  validation: required
+                  message: name field is required
+  parameters:
+    id:
+      in: path
+      name: id
+      required: true
+      schema:
+        type: string
+      description: resource id
+  schemas:
+    User:
+      type: object
+      description: user data
+      properties:
+        _id:
+          type: string
+        email:
+          type: string
+          format: email
+        admin:
+          type: boolean
+          description: is administrator
+      required: [_id, email, admin]
+    DetailedUser:
+      type: object
+      description: detailed user data
+      allOf:
+        - $ref: '#/components/schemas/User'
+        - properties:
+            quota:
+              type: integer
+              description: stories quota (unlimited if not defined)
+        - required: [quota]
+    AuthorizedUser:
+      type: object
+      description: detailed user with additional private data
+      allOf:
+        - $ref: '#/components/schemas/DetailedUser'
+        - properties:
+            tokens:
+              type: array
+              description: all issued auth tokens
+              items:
+                type: string
+        - required: [tokens]
+    UserRequestData:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+        quota:
+          type: integer
+          minimum: 0
+          description: user stories quota, can be set to null to remove quota, applies only if authorized user is administrator
+      required: [email, password]
+    Story:
+      type: object
+      properties:
+        _id:
+          type: string
+        body:
+          type: string
+        user:
+          $ref: '#/components/schemas/User'
+    StoryRequestData:
+      type: object
+      properties:
+        body:
+          type: string
+      required: [body]
+tags:
+  - name: auth
+  - name: users
+  - name: stories
+paths:
+  /auth:
+    post:
+      description: Authenticate
+      tags: [auth, users]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  description: authenticate by email and password
+                  properties:
+                    email:
+                      type: string
+                      format: email
+                      description: user email
+                    password:
+                      type: string
+                      description: user password
+                  required: [email, password]
+            examples:
+              email_password:
+                summary: email and password
+                value:
+                  email: example@mail.com
+                  password: secret
+      responses:
+        200:
+          description: Successful authentication
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+                  token:
+                    type: string
+                    description: bearer token
+        400:
+          description: Bad credentials
+  /me:
+    get:
+      description: Get information about the authorized user
+      tags: [users]
+      security:
+        - bearer: []
+      responses:
+        200:
+          description: User
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthorizedUser'
+        401:
+          $ref: '#/components/responses/401'
+  /users:
+    get:
+      description: For administrators only. Get all users.
+      tags: [users]
+      security:
+        - bearer: []
+      responses:
+        200:
+          description: Array of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/adminOnly403'
+    post:
+      description: For administrators only. Create new user.
+      tags: [users]
+      security:
+        - bearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRequestData'
+      responses:
+        201:
+          description: New user created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailedUser'
+        400:
+          $ref: '#/components/responses/malformed400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/adminOnly403'
+        422:
+          $ref: '#/components/responses/422'
+  /users/{id}:
+    parameters:
+      - $ref: '#/components/parameters/id'
+    get:
+      description: For administrators only. Get user details.
+      tags: [users]
+      security:
+        - bearer: []
+      responses:
+        200:
+          description: User data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailedUser'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/adminOnly403'
+    put:
+      description: For administrators or authorized user himself. Modify user data.
+      tags: [users]
+      security:
+        - bearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRequestData'
+      responses:
+        200:
+          description: User has been successfully modified
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailedUser'
+        400:
+          $ref: '#/components/responses/malformed400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/adminOnly403'
+        422:
+          $ref: '#/components/responses/422'
+    delete:
+      description: For administrators or authorized user himself. Delete user and all his stories.
+      tags: [users]
+      security:
+        - bearer: []
+      responses:
+        200:
+          description: User has been successfully deleted
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/adminOnly403'
+  /stories:
+    get:
+      description: Get stories list. Returns all stories for administrators or own stories for other users.
+      tags: [stories]
+      parameters:
+        - in: query
+          name: user
+          schema:
+            type: string
+          description: filter by user id, applicable only for administrators
+      security:
+        - bearer: []
+      responses:
+        200:
+          description: Array of stories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StoryRequestData'
+        401:
+          $ref: '#/components/responses/401'
+    post:
+      description: Create new story owned by authorized user.
+      tags: [stories]
+      security:
+        - bearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoryRequestData'
+      responses:
+        201:
+          description: New story created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Story'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          description: Quota exceeded or authorized user can not create stories at all
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: human readable error message
+                  quota:
+                    type: integer
+                    description: authorized user quota
+                  storiesCount:
+                    type: integer
+                    description: authorized user's stories count, only if quota > 0
+                required: [message, quota]
+        422:
+          $ref: '#/components/responses/422'
+  /stories/{id}:
+    parameters:
+      - $ref: '#/components/parameters/id'
+    get:
+      description: Get story details. Any story can be fetched by administrators, only owned story can be fetched by other users.
+      tags: [stories]
+      security:
+        - bearer: []
+      responses:
+        200:
+          description: Story data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Story'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/adminOnly403'
+    put:
+      description: Modify story. Any story can be modified by administrators, only owned story can be modified by other users.
+      tags: [stories]
+      security:
+        - bearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoryRequestData'
+      responses:
+        200:
+          description: Story has been successfully modified
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Story'
+        400:
+          $ref: '#/components/responses/malformed400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/adminOnly403'
+        422:
+          $ref: '#/components/responses/422'
+    delete:
+      description: Delete story. Any story can be deleted by administrators, only owned story can be deleted by other users.
+      tags: [stories]
+      security:
+        - bearer: []
+      responses:
+        200:
+          description: Story has been successfully deleted
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/adminOnly403'

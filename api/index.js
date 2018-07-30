@@ -8,6 +8,7 @@ function onError(err, req, res, next) {
 	if (next) next();
 }
 
+// helper function to let error handler work with async functions
 function wrapAsyncHandler(fn) {
 	return (req, res) => new Promise(resolve => fn(req, res)
 		.then(resolve)
@@ -31,6 +32,7 @@ module.exports = ({ models, prefix = '/api/' }) => {
 
 	// middleware, return 401 if user is not authorized
 	app.use(async (req, res, next) => {
+		// bypass auth route
 		if (req.path === authRoute || (await req.loadUser())) next();
 		else sendError({ statusCode: 401, message: 'Authorization Required' }, res);
 	});
@@ -53,7 +55,7 @@ module.exports = ({ models, prefix = '/api/' }) => {
 		sendJson({ res, data: user ? user.toProfileJSON() : null });
 	});
 
-	// auto create CRUD model routes
+	// auto create CRUD for resources
 	models.forEach(Model => {
 		// /api/users, /api/stories ...
 		const basePath = prefix + Model.collectionName();

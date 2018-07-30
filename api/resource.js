@@ -1,6 +1,15 @@
 const { Document } = require('camo'),
 	{ validateAll } = require('indicative');
 
+/**
+ * Resource is a model containing additional logic related to REST API including:
+ * - available API methods
+ * - API visible attributes
+ * - API fillable attributes
+ * - declarative validation description
+ * - index/item query building
+ * - permission management
+ */
 module.exports = class Resource extends Document {
 	/**
 	 * Exposed API methods.

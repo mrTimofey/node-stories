@@ -63,7 +63,7 @@ module.exports = ({ models, prefix = '/api/' }) => {
 		// index
 		if (Model.methods.includes('index')) app.get(basePath, async (req, res) => {
 			if (!(await Model.allowIndex(req))) return sendPermissionDenied(res);
-			sendJson({ res, data: (await Model.indexQuery(req)).map(item => item.toSafeJSON()) });
+			sendJson({ res, data: (await Model.indexQuery(req)).map(item => item.toListJSON()) });
 		});
 
 		// single item
@@ -71,16 +71,17 @@ module.exports = ({ models, prefix = '/api/' }) => {
 			const item = await Model.itemQuery(req);
 			if (!item) return sendNotFound(res);
 			if (!(await item.allowShow(req))) return sendPermissionDenied(res);
-			sendJson({ res, data: item.toSafeJSON() });
+			sendJson({ res, data: await item.toDetailedJSON(req) });
 		});
 
 		// create and update saving logic
 		async function saveElement(req, res, body, item) {
+			const status = item._id ? 200 : 201;
 			item.fill(body);
 			await item.fillFromRequest(req, body);
 			await item.validateFields();
 			await item.save();
-			sendJson({ res, data: item.toSafeJSON() });
+			sendJson({ res, status, data: await item.toDetailedJSON(req) });
 		}
 
 		// create

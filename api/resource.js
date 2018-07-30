@@ -170,4 +170,22 @@ module.exports = class Resource extends Document {
 			safeObj[name] = this[name] instanceof Resource ? this[name].toSafeJSON() : this[name];
 		return safeObj;
 	}
+
+	/**
+	 * JSON representation for API index.
+	 * @param {Object} req request object
+	 * @returns {Object} data
+	 */
+	toListJSON(req) {
+		return this.toSafeJSON();
+	}
+
+	/**
+	 * JSON representation for API single item response (can be async).
+	 * @param {Object} req request object
+	 * @returns {Object|Promise<Object>} data
+	 */
+	toDetailedJSON(req) {
+		return this.toSafeJSON();
+	}
 };

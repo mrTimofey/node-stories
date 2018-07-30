@@ -28,22 +28,24 @@ beforeAll(() => new Promise(resolve => {
 	);
 }));
 
+// generate unique email on each call
 function nextEmail() {
 	if (!nextEmail.counter) nextEmail.counter = 0;
 	return 'test@domain' + (nextEmail.counter++) + '.com';
 }
 
-async function createUserAndAuthenticate(req, data = {}) {
-	const credentials = {
-		email: nextEmail(),
-		password: 'password'
-	};
-	await User.create({ ...credentials, ...data }).save();
-	return await axios.post('auth', credentials);
+async function createUser(data) {
+	return await User.create({ password: '123456', ...data, email: nextEmail() }).save();
 }
 
-async function createAdminAndAuthenticate(req) {
-	return await createUserAndAuthenticate(req, { admin: true });
+async function createUserAndAuthenticate(data = {}) {
+	const password = 'password',
+		user = await createUser({ password, ...data });
+	return await axios.post('auth', { email: user.email, password });
+}
+
+async function createAdminAndAuthenticate() {
+	return await createUserAndAuthenticate({ admin: true });
 }
 
 describe('Auth API', () => {
@@ -107,7 +109,7 @@ describe('Users API', () => {
 			res = await axios.post('users', { email, password: 'secret' }, {
 				headers: { Authorization: 'Bearer ' + authRes.data.token }
 			});
-		expect(res.status).toBe(200);
+		expect(res.status).toBe(201);
 		expect(res.data).toHaveProperty('_id');
 		expect(res.data.email).toBe(email);
 	});
@@ -183,10 +185,13 @@ describe('Stories API', () => {
 	});
 	test('POST /stories should create new story owned by authorized user', async () => {
 		const authRes = await createUserAndAuthenticate(),
-			res = await axios.post('stories', { body: 'Test story' }, {
+			body = 'Test story',
+			res = await axios.post('stories', { body }, {
 				headers: { Authorization: 'Bearer ' + authRes.data.token }
 			});
+		expect(res.status).toBe(201);
 		expect(authRes.data.user._id === res.data.user._id).toBe(true);
+		expect(res.data.body).toBe(body);
 	});
 	test('PUT /stories/:id should return 403 for non-owner non-admin user', async () => {
 		let authRes = await createUserAndAuthenticate();
@@ -228,7 +233,74 @@ describe('Stories API', () => {
 	});
 });
 
+describe('Stories quota', () => {
+	test('PUT /users/:id with { quota } and should do nothing for non-admin user himself', async () => {
+		const authRes = await createUserAndAuthenticate(),
+			res = await axios.put('users/' + authRes.data.user._id, { quota: 10 }, {
+				headers: { Authorization: 'Bearer ' + authRes.data.token }
+			}),
+			freshUser = await User.findOne({ _id: authRes.data.user._id });
+		expect(res.status).toBe(200);
+		expect(res.data).not.toHaveProperty('quota');
+		expect(freshUser).toHaveProperty('quota');
+		expect(freshUser.quota).toBeFalsy();
+	});
+	test('PUT /users/:id with { quota } should properly modify quota for admin', async () => {
+		const victim = await createUser(),
+			quota = 10,
+			authRes = await createAdminAndAuthenticate(),
+			res = await axios.put('users/' + victim._id, { quota }, {
+				headers: { Authorization: 'Bearer ' + authRes.data.token }
+			});
+		expect(victim.quota).toBeFalsy();
+		expect(res.status).toBe(200);
+		expect(res.data._id).toBe(victim._id);
+		expect(res.data.quota).toBe(quota);
+	});
+	test('POST /stories should work for user with undefined (by default) quota', async () => {
+		const authRes = await createUserAndAuthenticate(),
+			count = 5;
+		expect(authRes.data.user.quota).toBeFalsy();
+		let created = 0;
+		for (let i = 0; i < count; ++i) {
+			const res = await axios.post('/stories', { body: 'Awesome story' }, {
+				headers: { Authorization: 'Bearer ' + authRes.data.token }
+			});
+			if (res.status === 201) ++created;
+		}
+		expect(created).toBe(count);
+	});
+	test('POST /stories should not work for user with quota = 0', async () => {
+		const authRes = await createUserAndAuthenticate({ quota: 0 }),
+			count = 5;
+		expect(authRes.data.user.quota).toBe(0);
+		let denied = 0;
+		for (let i = 0; i < count; ++i) {
+			const res = await axios.post('/stories', { body: 'Awesome story' }, {
+				headers: { Authorization: 'Bearer ' + authRes.data.token }
+			});
+			if (res.status === 403) ++denied;
+		}
+		expect(denied).toBe(count);
+	});
+	test('POST /stories should not allow user to create more stories than quota', async () => {
+		const quota = 5,
+			overQuota = 3,
+			authRes = await createUserAndAuthenticate({ quota });
+		expect(authRes.data.user.quota).toBe(quota);
+		let denied = 0;
+		for (let i = 0; i < quota + overQuota; ++i) {
+			const res = await axios.post('/stories', { body: 'Awesome story' }, {
+				headers: { Authorization: 'Bearer ' + authRes.data.token }
+			});
+			if (res.status === 403) ++denied;
+		}
+		expect(denied).toBe(overQuota);
+	});
+});
+
 afterAll(() => {
 	app.server.close();
+	// wipe database
 	exec('rm -rf ' + DATA_FOLDER_ABS);
 });

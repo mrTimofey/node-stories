@@ -145,6 +145,21 @@ module.exports = class User extends Resource {
 	}
 
 	/**
+	 * Show more information for admin.
+	 * @inheritDoc
+	 */
+	async toDetailedJSON(req) {
+		const [data, user] = await Promise.all([
+			super.toDetailedJSON(req),
+			req.loadUser()
+		]);
+		if (user.admin) {
+			data.quota = this.quota;
+		}
+		return data;
+	}
+
+	/**
 	 * Reveal user's own data.
 	 * @returns {Object} user data
 	 */

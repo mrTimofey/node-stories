@@ -72,16 +72,21 @@ module.exports = ({ models, prefix = '/api/' }) => {
 			sendJson({ res, data: item.toSafeJSON() });
 		});
 
-		// create
-		if (Model.methods.includes('create')) app.post(basePath, async (req, res) => {
-			if (!(await Model.allowCreate(req))) return sendPermissionDenied(res);
-			const body = await jsonBody(req),
-				item = Model.create();
+		// create and update saving logic
+		async function saveElement(req, res, body, item) {
 			item.fill(body);
 			await item.fillFromRequest(req, body);
 			await item.validateFields();
 			await item.save();
 			sendJson({ res, data: item.toSafeJSON() });
+		}
+
+		// create
+		if (Model.methods.includes('create')) app.post(basePath, async (req, res) => {
+			if (!(await Model.allowCreate(req))) return sendPermissionDenied(res);
+			const body = await jsonBody(req),
+				item = Model.create();
+			await saveElement(req, res, body, item);
 		});
 
 		// update
@@ -90,11 +95,7 @@ module.exports = ({ models, prefix = '/api/' }) => {
 			if (!item) return sendNotFound(res);
 			if (!(await item.allowUpdate(req))) return sendPermissionDenied(res);
 			const body = await jsonBody(req);
-			item.fill(body);
-			await item.fillFromRequest(req, body);
-			await item.validateFields();
-			await item.save();
-			sendJson({ res, data: item.toSafeJSON() });
+			await saveElement(req, res, body, item);
 		});
 
 		// delete

@@ -112,9 +112,13 @@ module.exports = ({ models, prefix = '/api/' }) => {
 	});
 
 	// patch all handlers to properly catch async errors in async functions
-	for (const method of Object.keys(app.handlers)) for (const path of Object.keys(app.handlers[method])) {
-		const fn = app.handlers[method][path];
-		if (fn.constructor.name === 'AsyncFunction') app.handlers[method][path] = wrapAsyncHandler(fn);
+	for (const method of Object.keys(app.handlers)) {
+		for (const path of Object.keys(app.handlers[method])) {
+			for (const handlerIndex in app.handlers[method][path]) {
+				const fn = app.handlers[method][path][handlerIndex];
+				if (fn.constructor.name === 'AsyncFunction') app.handlers[method][path][handlerIndex] = wrapAsyncHandler(fn);
+			}
+		}
 	}
 
 	return app;

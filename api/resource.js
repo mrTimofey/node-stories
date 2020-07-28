@@ -1,5 +1,6 @@
+/* eslint-disable no-unused-vars */
 const { Document } = require('camo'),
-	{ validateAll } = require('indicative');
+	{ validateAll } = require('indicative/validator');
 
 /**
  * Resource is a model containing additional logic related to REST API including:

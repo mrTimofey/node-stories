@@ -19,17 +19,18 @@
   },
   "homepage": "https://github.com/mrTimofey/node-stories#readme",
   "devDependencies": {
-    "axios": "^0.18.0",
-    "eslint": "^5.2.0",
-    "eslint-plugin-jest": "^21.18.0",
-    "jest": "^23.4.2"
+    "axios": "^0.19.2",
+    "eslint": "^7.5.0",
+    "eslint-plugin-jest": "^23.19.0",
+    "jest": "^26.1.0"
   },
   "dependencies": {
     "camo": "^0.12.3",
-    "indicative": "^5.0.6",
+    "indicative": "^7.4.4",
+    "indicative-utils": "^7.0.4",
     "nedb": "^1.8.0",
     "password-hash": "^1.2.2",
-    "polka": "^0.4.0"
+    "polka": "^0.5.2"
   },
   "jest": {
     "testEnvironment": "node",

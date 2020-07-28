@@ -1,4 +1,4 @@
-const { exec } = require('child_process'),
+const { execSync } = require('child_process'),
 	createApp = require('../app'),
 	Axios = require('axios'),
 	User = require('../models/user'),
@@ -18,15 +18,16 @@ const axios = Axios.create({
 	}
 });
 
-beforeAll(() => new Promise(resolve => {
-	exec('rm -rf "' + DATA_FOLDER_ABS + '" && mkdir "' + DATA_FOLDER_ABS + '"',
-		() => createApp({ dataFolder: DATA_FOLDER })
-			.then(_app => {
-				app = _app;
-				app.listen(PORT).then(resolve);
-			})
-	);
-}));
+beforeAll(async () => {
+	execSync('rm -rf "' + DATA_FOLDER_ABS + '" && mkdir "' + DATA_FOLDER_ABS + '"');
+	app = (await createApp({ dataFolder: DATA_FOLDER })).listen(PORT);
+});
+
+afterAll(() => {
+	app.server.close();
+	// wipe database
+	execSync('rm -rf "' + DATA_FOLDER_ABS + '"');
+});
 
 // generate unique email on each call
 function nextEmail() {
@@ -112,6 +113,44 @@ describe('Users API', () => {
 		expect(res.status).toBe(201);
 		expect(res.data).toHaveProperty('_id');
 		expect(res.data.email).toBe(email);
+	});
+	test('POST /users should return validation error data on invalid data', async () => {
+		const authRes = await createAdminAndAuthenticate(),
+			res = await axios.post('users', { email: 'invalid-email' }, {
+				headers: { Authorization: 'Bearer ' + authRes.data.token }
+			});
+		expect(res.status).toBe(422);
+		expect(res.data.errors
+			.findIndex(item => item.field === 'email' && item.validation === 'email') > -1)
+			.toBe(true);
+		expect(res.data.errors
+			.findIndex(item => item.field === 'password' && item.validation === 'required') > -1)
+			.toBe(true);
+	});
+	test('GET /users/:id with existing :id should return user object for admin', async () => {
+		const authRes = await createAdminAndAuthenticate(),
+			user = await createUser(),
+			res = await axios.get('users/' + user._id, {
+				headers: { Authorization: 'Bearer ' + authRes.data.token }
+			});
+		expect(res.status).toBe(200);
+		expect(res.data._id).toBe(user._id);
+		expect(res.data.email).toBe(user.email);
+	});
+	test('GET /users/:id with non-existing :id should return 404 for admin', async () => {
+		const authRes = await createAdminAndAuthenticate(),
+			res = await axios.get('users/i-am-not-here', {
+				headers: { Authorization: 'Bearer ' + authRes.data.token }
+			});
+		expect(res.status).toBe(404);
+	});
+	test('GET /users/:id with existing :id should return 403 for non-admin', async () => {
+		const authRes = await createUserAndAuthenticate(),
+			user = await createUser(),
+			res = await axios.get('users/' + user._id, {
+				headers: { Authorization: 'Bearer ' + authRes.data.token }
+			});
+		expect(res.status).toBe(403);
 	});
 	test('PUT /users/:id should update authorized user himself', async () => {
 		const authRes = await createUserAndAuthenticate(),
@@ -297,10 +336,4 @@ describe('Stories quota', () => {
 		}
 		expect(denied).toBe(overQuota);
 	});
-});
-
-afterAll(() => {
-	app.server.close();
-	// wipe database
-	exec('rm -rf ' + DATA_FOLDER_ABS);
 });

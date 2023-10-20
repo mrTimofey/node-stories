@@ -25,7 +25,7 @@
     "jest": "^26.4.2"
   },
   "dependencies": {
-    "camo": "^0.12.3",
+    "camo": "^0.12.4",
     "indicative": "^7.4.4",
     "indicative-utils": "^7.0.4",
     "nedb": "^1.8.0",
